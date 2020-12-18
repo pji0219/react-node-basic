@@ -3,6 +3,7 @@ const app = express(); // express 함수를 이용해서 새로운 App을 만듦
 const port = 5000;
 const bodyParser = require('body-parser');
 const { User } = require('./models/User');
+const config = require('./config/key');
 
 // application/x-www-form-urlencoded 이렇게 된 데이터를 분석해서 가지고 오는 것
 app.use(bodyParser.urlencoded({extended: true}));
@@ -11,7 +12,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
 const mongoose = require('mongoose') // 몽구스 불러옴
-mongoose.connect( {
+mongoose.connect(config.mongoURI, {
   useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true, useFindAndModify: false
 }).then(() => console.log('Mongo DB Connected!'))
   .catch(error => console.log(error));
@@ -42,6 +43,31 @@ app.post('/register', (req, res) => {
   })
 })
 
+app.post('/login', (req, res) => {
+
+  // 요청된 이메일이 데이터베이스에 있는지 찾는다.
+  // 몽고 DB의 findOne() 메서드 사용
+  User.findOne({ email: req.body.email }, (err, user) => {
+    if(!user) {
+      return res.json({
+        loginSuccess: false,
+        message: "이메일에 해당하는 유저가 없습니다."
+      })
+    }
+
+    // 요청된 이메일이 데이터베이스에 있다면 비밀번호가 맞는지 확인한다.
+    // 메서드 이름은 자신이 아무거나 정해도 된다.
+    user.comparePassword(req.body.password, (err, isMatch) => {
+      if(!isMatch)
+        return res.json({ loginSuccess: false, message: "비밀번호가 틀렸습니다."})
+      
+      // 비밀번호 까지 맞다면 토큰을 생성한다.
+      // 메서드 이름은 자신이 아무거나 정해도 된다.
+      user.generateToken((err, user))
+
+    })
+  })
+})
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
