@@ -2,6 +2,7 @@ const express = require('express') // express 모듈을 가져옴
 const app = express(); // express 함수를 이용해서 새로운 App을 만듦
 const port = 5000;
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const { User } = require('./models/User');
 const config = require('./config/key');
 
@@ -10,6 +11,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 // application.json 타입으로 된 것을 분석해서 가지고 올 수 있게 해주는 것
 app.use(bodyParser.json());
+app.use(cookieParser());
 
 const mongoose = require('mongoose') // 몽구스 불러옴
 mongoose.connect(config.mongoURI, {
@@ -63,7 +65,19 @@ app.post('/login', (req, res) => {
       
       // 비밀번호 까지 맞다면 토큰을 생성한다.
       // 메서드 이름은 자신이 아무거나 정해도 된다.
-      user.generateToken((err, user))
+      user.generateToken((err, user) => {
+        if (err) return res.status(400).send(err);
+
+        /* 토큰을 저장한다. 어디에? 쿠키, 로컬스토로리지, 세션 중에 하나, 
+        어디에 저장해야 안전한지에 대한 것은 논란이 많다. 그래서 여러가지 방법이 
+        있다고 알아두면 된다. 여기서는 쿠키에다 저장하도록 하겠다. */
+
+        // 여기서는 x_auth은 쿠키 이름을 정하는 것인데 아무거나 써도 된다.
+        return res.cookie("x_auth", user.token)
+          .status(200)
+          .json({ loginSuccess: true, userId: user._id })
+
+      })
 
     })
   })

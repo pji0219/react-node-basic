@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const saltRounds = 10; // salt를 몇 글자로 할건지 정하는 것
+const jwt = require('jsonwebtoken');
 
 // 스키마 작성
 const userSchema = mongoose.Schema({
@@ -68,8 +69,28 @@ userSchema.methods.comparePassword = function(plainPassword, cb) {
     // 오리지날 패스워드와 암호화된 비밀번호를 비교할 때 bcrypt의 compare()메서드로 오리지날 비번을 암호화 시켜서 비교한다.
     bcrypt.compare(plainPassword, this.password, function(err, ismatch) {
         if(err) return cb(err)
-        cb(null, ismatch) 
+        return cb(null, ismatch) 
     })
+}
+
+userSchema.methods.generateToken = function(cb) {
+
+    var user = this;
+
+    // jsonwebtoken을 이용해서 token을 생성하기
+    /* 몽고 DB에 저장된 아이디와 뒤에 내가 지정해준 문자열이 합쳐져서 토큰이 생성 된다.
+    user._id + 'secretToken' = token
+    그리고 나중에 토큰을 해석할때 'secretToken'를 넣으면 user_id가 나와서 토큰을 가지고
+    이 사람이 누구인지 알 수 있다.
+    그래서 secretToken을 기억해둬야 한다. */
+    var token = jwt.sign(user._id.toHexString(), 'secretToken')
+
+    user.token = token
+    user.save(function(err, user) {
+        if(err) return cb(err)
+        return cb(null, user)
+    })
+
 }
 
 // 모델로 스키마를 감싸줌
