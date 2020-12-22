@@ -55,13 +55,14 @@ userSchema.pre('save', function(next) {
             bcrypt.hash(user.password, salt, function(err,hash) {
                 if(err) return next(err)
                 user.password = hash // 비밀번호를 암호화 시켜줌
-                next() // 암호화 코드 실행 후 index.js의 DB 저장 코드로 넘어가고 저장 시킴
+               return next() // 암호화 코드 실행 후 index.js의 DB 저장 코드로 넘어가고 저장 시킴
             })
         })
     } else {
-        next() // 비밀번호 외에 다른것을 변경시에는 암호화 시키지 않고 저장 코드로 넘어간다.
+       return next() // 비밀번호 외에 다른것을 변경시에는 암호화 시키지 않고 저장 코드로 넘어간다.
     }
 })
+
 
 // 비밀번호 일치 불일치 확인 index.js에서 내가 만든 함수의 두번째 파라미터를 콜백 함수로 이용한다.
 userSchema.methods.comparePassword = function(plainPassword, cb) {
@@ -91,6 +92,25 @@ userSchema.methods.generateToken = function(cb) {
         return cb(null, user)
     })
 
+}
+
+
+// 인증
+// 토큰 복호화
+userSchema.statics.findByToken = function(token, cb) {
+    var user = this;
+
+    // 토큰을 decode 한다. 토큰을 decode하면 아이디가 나온다.
+    jwt.verify(token, 'secretToken', function(err, decoded) {
+
+        /* 유저 아이디를 이용해서 유저를 찾은 다음에
+        클라이언트에서 가져온 token과 DB에 보관된 토큰이 일치하는지 확인 */
+        user.findOne({ "_id": decoded, "token": token }, function(err, user) {
+            if (err) return cb(err);
+            return cb(null, user)
+        })
+
+    })
 }
 
 // 모델로 스키마를 감싸줌

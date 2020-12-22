@@ -4,6 +4,7 @@ const port = 5000;
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const { User } = require('./models/User');
+const { auth } = require('./middleware/auth');
 const config = require('./config/key');
 
 // application/x-www-form-urlencoded 이렇게 된 데이터를 분석해서 가지고 오는 것
@@ -20,14 +21,19 @@ mongoose.connect(config.mongoURI, {
   .catch(error => console.log(error));
 
 app.get('/', (req, res) => {
-  res.send('Hello World! 안녕 세상아!')
+ return res.send('Hello World! 안녕 세상아!')
 }) // 루트 디렉토리에 헬로 월드 출력 되게 함
 
+app.get('/api/hello', (req, res) => {
+  return res.send('Hello~')
+})
 
+
+// register route
 /* 회원 가입할 때 필요한 정보들을 클라이언트에서 가져오면
 그 것들을 데이터 베이스에 넣어 준다. */
 
-app.post('/register', (req, res) => {
+app.post('/api/users/register', (req, res) => {
   // req.body 안에는 json형식으로 클라이언트로부터 받아온 id, password등등이 들어 있다.
   // 이렇게 클라이언트로 부터 데이터를 받아 올 수 있는 것은 bodyParser가 있기 때문이다.
   const user = new User(req.body) 
@@ -45,7 +51,9 @@ app.post('/register', (req, res) => {
   })
 })
 
-app.post('/login', (req, res) => {
+
+// login route
+app.post('/api/users/login', (req, res) => {
 
   // 요청된 이메일이 데이터베이스에 있는지 찾는다.
   // 몽고 DB의 findOne() 메서드 사용
@@ -82,6 +90,39 @@ app.post('/login', (req, res) => {
     })
   })
 })
+
+// auth route
+app.get('/api/users/auth', auth, (req, res) => {
+
+  // 미들웨어를 통과해서 이 코드까지 왔다는 얘기는 인증이 true라는 말.
+  return res.status(200).json({
+    _id: req.user._id,
+    isAdmin: req.user.role === 0 ? false : true,
+    isAuth: true,
+    email: req.user.email,
+    name: req.user.name,
+    lastname: req.user.lastname,
+    role: req.user.role,
+    image: req.user.image
+  })
+
+})
+
+
+/* logout route
+로그인 된 상태이기 때문에 auth 미들웨어를 사용해줘야 한다. */
+app.get('/api/users/logout', auth, (req, res) => {
+
+  // 유저를 찾아서 데이터를 업데이트 시켜 주는 메서드
+  User.findOneAndUpdate({ _id: req.user._id },
+    { token:"" },
+    (err, user) => {
+      if (err) return res.json({ logoutSuccess: false, err});
+      return res.status(200).send({logoutSuccess: true});
+  })
+
+})
+
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
