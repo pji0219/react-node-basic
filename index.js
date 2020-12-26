@@ -3,9 +3,9 @@ const app = express(); // express 함수를 이용해서 새로운 App을 만듦
 const port = 5000;
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
-const { User } = require('./models/User');
-const { auth } = require('./middleware/auth');
-const config = require('./config/key');
+const { User } = require('./server/models/User');
+const { auth } = require('./server/middleware/auth');
+const config = require('./server/config/key');
 
 // application/x-www-form-urlencoded 이렇게 된 데이터를 분석해서 가지고 오는 것
 app.use(bodyParser.urlencoded({extended: true}));
